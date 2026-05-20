@@ -40,6 +40,7 @@ export function useWebSocket<TReceive = Record<string, unknown>, TSend = Record<
 
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dummyEnabled = process.env.NEXT_PUBLIC_USE_DUMMY_DATA === "true";
 
   const clearTimers = useCallback(() => {
     if (reconnectTimerRef.current !== null) {
@@ -67,7 +68,7 @@ export function useWebSocket<TReceive = Record<string, unknown>, TSend = Record<
   }, []);
 
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || dummyEnabled) {
       return;
     }
 
@@ -132,6 +133,7 @@ export function useWebSocket<TReceive = Record<string, unknown>, TSend = Record<
     };
   }, [
     clearTimers,
+    dummyEnabled,
     enabled,
     getHeartbeatPayload,
     heartbeatMs,

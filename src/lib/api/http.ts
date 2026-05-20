@@ -14,6 +14,16 @@ export type QueryValue = string | number | boolean | null | undefined;
 
 const DEFAULT_PROXY_BASE = "/api/hive";
 const DEFAULT_BACKEND_HTTP_BASE = "http://localhost:8000";
+type DummyApiCache = {
+  GET?: Record<string, unknown>;
+  POST?: Record<string, unknown>;
+};
+
+let dummy_api_data: DummyApiCache | null = null;
+
+export function isDummyEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_USE_DUMMY_DATA === "true";
+}
 
 function getProxyBase(): string {
   const configured = process.env.NEXT_PUBLIC_HIVE_PROXY_PREFIX ?? DEFAULT_PROXY_BASE;
@@ -34,6 +44,65 @@ function normalizePath(path: string): string {
     return "";
   }
   return path.startsWith("/") ? path : `/${path}`;
+}
+
+async function loadDummyApiData(): Promise<DummyApiCache> {
+  if (dummy_api_data) {
+    return dummy_api_data;
+  }
+
+  const response = await fetch("/dummy_api_data.json", { cache: "force-cache" });
+  if (!response.ok) {
+    throw new ApiError("Failed to load dummy API cache", response.status, await parseResponseBody(response));
+  }
+
+  dummy_api_data = (await response.json()) as DummyApiCache;
+  return dummy_api_data;
+}
+
+function matchTemplatePath(path: string, template: string): boolean {
+  if (template.endsWith("/*")) {
+    return path.startsWith(template.slice(0, -1));
+  }
+
+  const pathSegments = path.split("/").filter(Boolean);
+  const templateSegments = template.split("/").filter(Boolean);
+  if (pathSegments.length !== templateSegments.length) {
+    return false;
+  }
+
+  return templateSegments.every((segment, idx) => segment.startsWith(":") || segment === pathSegments[idx]);
+}
+
+function findDummyPayload(cache: DummyApiCache, method: string, path: string): unknown | undefined {
+  const map = cache[method as keyof DummyApiCache] ?? {};
+  if (Object.prototype.hasOwnProperty.call(map, path)) {
+    return map[path];
+  }
+
+  const pathWithoutQuery = path.split("?")[0];
+  if (pathWithoutQuery && Object.prototype.hasOwnProperty.call(map, pathWithoutQuery)) {
+    return map[pathWithoutQuery];
+  }
+
+  for (const [template, payload] of Object.entries(map)) {
+    if (template.includes(":") || template.endsWith("/*")) {
+      if (matchTemplatePath(pathWithoutQuery, template)) {
+        return payload;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+async function getDummyResponse<T>(method: string, path: string): Promise<T> {
+  const cache = await loadDummyApiData();
+  const payload = findDummyPayload(cache, method, path);
+  if (payload === undefined) {
+    throw new ApiError(`Dummy cache miss for ${method} ${path}`, 404, { method, path });
+  }
+  return payload as T;
 }
 
 export function withQuery(path: string, query?: Record<string, QueryValue>): string {
@@ -100,7 +169,11 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
-  const url = `${getProxyBase()}${normalizePath(path)}`;
+  const normalizedPath = normalizePath(path);
+  if (isDummyEnabled()) {
+    return getDummyResponse<T>("GET", normalizedPath);
+  }
+  const url = `${getProxyBase()}${normalizedPath}`;
   return requestJson<T>(url, {
     method: "GET",
     ...init,
@@ -108,7 +181,11 @@ export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export async function apiPost<TBody, TResponse>(path: string, body: TBody, init?: RequestInit): Promise<TResponse> {
-  const url = `${getProxyBase()}${normalizePath(path)}`;
+  const normalizedPath = normalizePath(path);
+  if (isDummyEnabled()) {
+    return getDummyResponse<TResponse>("POST", normalizedPath);
+  }
+  const url = `${getProxyBase()}${normalizedPath}`;
   return requestJson<TResponse>(url, {
     method: "POST",
     headers: {

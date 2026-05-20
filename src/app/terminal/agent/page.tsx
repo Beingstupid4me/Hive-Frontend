@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Bot, Send, Activity } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { cn } from "@/lib/utils";
-import { apiPost } from "@/lib/api/http";
+import { apiPost, isDummyEnabled } from "@/lib/api/http";
 import { useApiResource } from "@/lib/hooks/useApiResource";
 import { useWebSocket } from "@/lib/hooks/useWebSocket";
 import { metricsSnapshotFallback } from "@/lib/api/fallbacks";
@@ -50,6 +50,7 @@ type AgentStreamMessage = {
 };
 
 export default function AgentPage() {
+  const dummyEnabled = isDummyEnabled();
   const { data, error } = useApiResource<MetricsSnapshotResponse>("/metrics/snapshot", {
     initialData: metricsSnapshotFallback,
     refreshMs: 15_000,
@@ -57,40 +58,66 @@ export default function AgentPage() {
 
   const agent = data.agent;
 
-  const dashboardCards: DashboardCard[] = useMemo(() => [
-    {
-      title: "Current Regime (HMM)",
-      value: agent.regime_label,
-      sub: `${formatSigned(agent.regime_sigma_change_pct, 2)}% sigma`,
-      progress: clampProgress(Math.abs(agent.regime_sigma_change_pct) * 4),
-      color: "primary",
-    },
-    {
-      title: "Alpha Signal Strength",
-      value: agent.alpha_signal_strength.toFixed(3),
-      sub: `${formatSigned(agent.alpha_signal_change_pct, 2)}%`,
-      progress: clampProgress(agent.alpha_signal_strength * 100),
-      color: "primary",
-    },
-    {
-      title: "Rotation Index",
-      value: agent.rotation_label,
-      sub: `${agent.rotation_rate_pct_per_day.toFixed(2)}% p/d`,
-      progress: clampProgress(agent.rotation_rate_pct_per_day * 4),
-      color: "gold",
-    },
-  ], [agent.alpha_signal_change_pct, agent.alpha_signal_strength, agent.regime_label, agent.regime_sigma_change_pct, agent.rotation_label, agent.rotation_rate_pct_per_day]);
+  const dashboardCards: DashboardCard[] = useMemo(() => {
+    if (dummyEnabled) {
+      return [
+        { title: "Current Regime (HMM)", value: "N/A", sub: "N/A", progress: 0, color: "primary" },
+        { title: "Alpha Signal Strength", value: "N/A", sub: "N/A", progress: 0, color: "primary" },
+        { title: "Rotation Index", value: "N/A", sub: "N/A", progress: 0, color: "gold" },
+      ];
+    }
 
-  const [displayedText, setDisplayedText] = useState(stripMarkdown(agent.daily_brief_markdown));
+    return [
+      {
+        title: "Current Regime (HMM)",
+        value: agent.regime_label,
+        sub: `${formatSigned(agent.regime_sigma_change_pct, 2)}% sigma`,
+        progress: clampProgress(Math.abs(agent.regime_sigma_change_pct) * 4),
+        color: "primary",
+      },
+      {
+        title: "Alpha Signal Strength",
+        value: agent.alpha_signal_strength.toFixed(3),
+        sub: `${formatSigned(agent.alpha_signal_change_pct, 2)}%`,
+        progress: clampProgress(agent.alpha_signal_strength * 100),
+        color: "primary",
+      },
+      {
+        title: "Rotation Index",
+        value: agent.rotation_label,
+        sub: `${agent.rotation_rate_pct_per_day.toFixed(2)}% p/d`,
+        progress: clampProgress(agent.rotation_rate_pct_per_day * 4),
+        color: "gold",
+      },
+    ];
+  }, [
+    agent.alpha_signal_change_pct,
+    agent.alpha_signal_strength,
+    agent.regime_label,
+    agent.regime_sigma_change_pct,
+    agent.rotation_label,
+    agent.rotation_rate_pct_per_day,
+    dummyEnabled,
+  ]);
+
+  const [displayedText, setDisplayedText] = useState(
+    dummyEnabled ? "N/A" : stripMarkdown(agent.daily_brief_markdown),
+  );
   const [chatInput, setChatInput] = useState("");
   const [queryReply, setQueryReply] = useState("");
   const [suggestedCommand, setSuggestedCommand] = useState(agent.suggested_command);
   const [isQuerying, setIsQuerying] = useState(false);
 
   useEffect(() => {
+    if (dummyEnabled) {
+      setDisplayedText("N/A");
+      setSuggestedCommand("N/A");
+      return;
+    }
+
     setDisplayedText(stripMarkdown(agent.daily_brief_markdown));
     setSuggestedCommand(agent.suggested_command);
-  }, [agent.daily_brief_markdown, agent.suggested_command]);
+  }, [agent.daily_brief_markdown, agent.suggested_command, dummyEnabled]);
 
   const handleStreamMessage = useCallback((payload: AgentStreamMessage) => {
     if (payload.type === "start" && payload.channel === "brief") {
@@ -157,6 +184,11 @@ export default function AgentPage() {
       return;
     }
 
+    if (dummyEnabled) {
+      setQueryReply("N/A (dummy mode)");
+      return;
+    }
+
     const query = chatInput.trim();
     if (stream.connected) {
       setIsQuerying(true);
@@ -194,9 +226,9 @@ export default function AgentPage() {
         <div className="flex items-center gap-2">
           <span className={cn(
             "flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold text-mono",
-            stream.connected ? "bg-primary/10 text-primary" : "bg-gold/10 text-gold",
+            dummyEnabled ? "bg-surface-hover text-text-tertiary" : stream.connected ? "bg-primary/10 text-primary" : "bg-gold/10 text-gold",
           )}>
-            <Bot className="w-3 h-3" /> Live Inference
+            <Bot className="w-3 h-3" /> {dummyEnabled ? "Dummy Data" : "Live Inference"}
           </span>
         </div>
       </motion.div>
