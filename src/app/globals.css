@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-primary: var(--accent-primary);
+  --color-primary-hover: var(--accent-primary-hover);
+  --color-primary-muted: var(--accent-primary-muted);
+  --color-primary-glow: var(--accent-primary-glow);
+  --color-cyan: #00f6ff;
+  --color-magenta: #ff00ff;
+  --color-neon-green: #00f5d4;
+  --color-neon-red: #ff0054;
+  --color-orange: #ec5b13;
+  --color-gold: #f59e0b;
+  --color-gain: #00f5d4;
+  --color-loss: #ff0054;
+  --color-bg: var(--surface-bg);
+  --color-surface: var(--surface-card);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-text-primary: var(--text-heading);
+  --color-text-secondary: var(--text-body);
+  --color-text-tertiary: var(--text-caption);
+  --color-text-inverse: var(--text-inverse);
+  --color-border: var(--border-default);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-accent: var(--border-accent);
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --animate-fade-in: fade-in 0.5s ease-out forwards;
+  --animate-slide-up: slide-up 0.5s cubic-bezier(0, 0, 0.2, 1) forwards;
+  --animate-slide-down: slide-down 0.4s cubic-bezier(0, 0, 0.2, 1) forwards;
+  --animate-pulse-slow: pulse-slow 3s ease-in-out infinite;
+  --animate-glow: glow-pulse 2s ease-in-out infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+}
+
+:root {
+  --accent-primary: #00f6ff;
+  --accent-primary-hover: #33f8ff;
+  --accent-primary-muted: rgba(0, 246, 255, 0.1);
+  --accent-primary-glow: rgba(0, 246, 255, 0.25);
+  --surface-bg: #0a0a0b;
+  --surface-card: #141e1f;
+  --surface-hover: rgba(255, 255, 255, 0.05);
+  --surface-elevated: #1a2e2f;
+  --text-heading: #f1f5f9;
+  --text-body: #94a3b8;
+  --text-caption: #64748b;
+  --text-inverse: #0a0a0b;
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-accent: rgba(0, 246, 255, 0.2);
+  color-scheme: dark;
+}
+
+.light {
+  --accent-primary: #ec5b13;
+  --accent-primary-hover: #d4510f;
+  --accent-primary-muted: rgba(236, 91, 19, 0.08);
+  --accent-primary-glow: rgba(236, 91, 19, 0.15);
+  --surface-bg: #f8f6f6;
+  --surface-card: #ffffff;
+  --surface-hover: #f1f5f9;
+  --surface-elevated: #ffffff;
+  --text-heading: #1e293b;
+  --text-body: #475569;
+  --text-caption: #94a3b8;
+  --text-inverse: #ffffff;
+  --border-default: #e2e8f0;
+  --border-subtle: #f1f5f9;
+  --border-accent: rgba(236, 91, 19, 0.2);
+  color-scheme: light;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 10px var(--accent-primary-glow); }
+  50% { box-shadow: 0 0 25px var(--accent-primary-glow), 0 0 50px var(--accent-primary-glow); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+body {
+  background: var(--surface-bg);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+.light ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); }
+
+@utility glass {
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+@utility glow-sm {
+  box-shadow: 0 0 10px var(--accent-primary-glow);
+}
+@utility glow-md {
+  box-shadow: 0 0 20px var(--accent-primary-glow);
+}
+@utility label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-caption);
+}
+@utility text-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+@utility paper-shadow {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1);
+}
+
+::selection {
+  background: var(--accent-primary);
+  color: var(--surface-bg);
+}
